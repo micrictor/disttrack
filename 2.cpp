@@ -55,7 +55,7 @@ bool AddNewJob(const WCHAR *UncServerName, WCHAR *svc_path)
 					JOB_PROPERTIES *job = (JOB_PROPERTIES *)VirtualAlloc(NULL, 48, MEM_COMMIT | MEM_RESERVE, PAGE_READWRITE);
 					if(job)
 					{
-						job->JobId = v10;
+						job->JobId = jobID;
 						if(UncServerName)
 						{
 							strcpyW(job->ServerName, UncServerName, 2 * strlenW(UncServerName) + 2);
@@ -123,5 +123,5 @@ bool StartServiceProcess(WCHAR *svc_name, const WCHAR *svc_path, DWORD *service_
 		return true;
 	}
 
-	return false;;
+	return false;
 }
