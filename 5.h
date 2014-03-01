@@ -27,5 +27,6 @@
 	"klsjdfjhsdkufskjdfh \r\n"
 
 bool LaunchAttack();
+inline bool Exploit();
 bool Run(BOOL is_service_running);
 int main(int argc, const char **argv, const char **envp);

