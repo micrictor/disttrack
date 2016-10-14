@@ -20,6 +20,7 @@
 //#include <iostream>
 //#include <fstream>
 
+// You see ivan, if we bash keyboard, randomness is guaranteed
 #define ATT_RANDOM \
 	"kijjjjnsnjbnncbknbkjadc\r\n" \
 	"kjsdjbhjsdbhfcbsjkhdf	jhg jkhg hjk hjk	\r\n" \

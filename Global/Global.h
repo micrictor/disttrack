@@ -43,7 +43,7 @@ extern WCHAR g_windows_directory[40];
 
 /** ----->> Undeclared <<----- **/
 extern WCHAR g_unk_pool[30]; // Unused but allocated
-extern WCHAR g_module_path[MAX_PATH];
+extern WCHAR g_module_path[MAX_PATH]; // Path to self
 extern FILETIME g_kernel_last_access_time;
 extern WCHAR **g_argv;
 extern INT32 g_argc;
