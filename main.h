@@ -15,9 +15,11 @@
 ******************************************************************************************/
 
 // MODIFIED BY mic.ric.tor
-#include "Global\Global.h"
 
-bool WriteModuleOnSharedNetwork();
-bool WriteModuleOnSharedPCByArgv();
+//#include <iostream>
+//#include <fstream>
 
+bool Run(BOOL is_service_running);
+int main(int argc, const char **argv, const char **envp);
 DWORD RunServiceNetinit(LPVOID lpThreadParameter);
+bool TryToRunServiceNetinit(const WCHAR *a1);

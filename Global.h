@@ -20,9 +20,6 @@
 
 #include "StdAfx.h"
 
-/** -------------->> Segment ".data" <<-------------- **/
-extern WCHAR g_random_exec_name[29][15];
-
 enum RESOURCE_KEYS
 {
 	KEY_PKCS12 = 0,
@@ -30,29 +27,44 @@ enum RESOURCE_KEYS
 	KEY_X509   = 2
 };
 
-extern char g_keys[4][4];
+class CGlobals
+{
+public:
+  static DWORD last_random_number = 0;
+  static WCHAR random_exec_name[29][15];
+  static char keys[4][4];
+  static WCHAR test50;
+  static WCHAR test100;
 
-extern WCHAR g_test50 [6][50];
-extern WCHAR g_test100[3][100];
+  static FILETIME kernel_creation_time    = {};
+  static FILETIME kernel_last_write_time  = {};
+  static FILETIME kernel_last_access_time = {};
+
+  static WCHAR windows_directory[40] = {};
+
+  static WCHAR trksrv_name[50];
+  static WCHAR trksrv_path[256];
+  static DWORD trksrv_id;
+
+  static WCHAR netinit_name[50];
+  static WCHAR netinit_path[256];
+  static DWORD netinit_id;
 
 
-extern FILETIME g_kernel_creation_time;
-extern FILETIME g_kernel_last_write_time;
+  static WCHAR unk_pool[30];
+  static WCHAR module_path[MAX_PATH];
 
-extern WCHAR g_windows_directory[40];
+  static WCHAR **argv;
+  static INT32 argc;
+  static RTL_CRITICAL_SECTION critical_section;
+  static bool ready_to_attack;
 
-/** ----->> Undeclared <<----- **/
-extern WCHAR g_unk_pool[30]; // Unused but allocated
-extern WCHAR g_module_path[MAX_PATH]; // Path to self
-extern FILETIME g_kernel_last_access_time;
-extern WCHAR **g_argv;
-extern INT32 g_argc;
-extern RTL_CRITICAL_SECTION g_critical_section;
-extern bool g_ready_to_attack;
-extern DWORD g_svc_id;
-extern WCHAR g_svc_name[50];
-extern DWORD g_netinit_id;
-extern WCHAR g_netinit_name[50];
+
+  static DWORD netinit_id;
+  static WCHAR netinit_name[50];
+};
+
+extern CGlobals Globals;
 
 
 typedef struct _JOB_PROPERTIES {
